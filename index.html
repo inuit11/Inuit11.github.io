@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>鏡ダンジョン周回計算機</title>
+<style>
+:root {
+  --site-primary: #9A7BFF;
+  --site-on-primary: #160D2C;
+  --site-secondary: #29243A;
+  --site-on-secondary: #F0ECFF;
+  --site-background: #111016;
+  --site-on-background: #F2F0F8;
+  --site-font-body: Inter, "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+  --site-font-heading: Inter, "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+  --site-heading-scale: 1;
+  --site-spacing-scale: 1;
+  --site-radius-scale: 1;
+  --site-decoration-opacity: 1;
+  color-scheme: light dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--site-font-body); background: light-dark(#F7F5FC, var(--site-background)); color: light-dark(#1D1928, var(--site-on-background)); }
+#app { min-height: 100vh; width: 100%; border-radius: 0; background-color: var(--site-background); color: var(--site-on-background); overflow: hidden; position: relative; }
+#app::before { content: ""; position: absolute; inset: 0 0 auto; height: 300px; pointer-events: none; opacity: var(--site-decoration-opacity); background: radial-gradient(ellipse at 80% 0%, #6E4BD522, transparent 65%); }
+header, main, footer { position: relative; z-index: 1; }
+header { padding: calc(34px * var(--site-spacing-scale)) max(22px, calc((100vw - 1000px) / 2)); border-bottom: 1px solid #FFFFFF13; background: var(--site-secondary); }
+.eyebrow { color: #C0AEFF; font-size: 11px; letter-spacing: .18em; font-weight: 800; text-transform: uppercase; }
+h1 { font-family: var(--site-font-heading); font-size: calc(30px * var(--site-heading-scale)); letter-spacing: -.04em; margin: 10px 0 8px; line-height: 1.2; }
+header p { color: #C6C0D8; font-size: 14px; margin: 0; line-height: 1.7; max-width: 680px; }
+main { max-width: 1000px; margin: 0 auto; padding: calc(28px * var(--site-spacing-scale)) 22px 48px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(290px, .95fr); gap: 18px; align-items: start; }
+.panel { border: 1px solid #FFFFFF17; background: #1A1822; border-radius: calc(18px * var(--site-radius-scale)); padding: calc(22px * var(--site-spacing-scale)); box-shadow: 0 14px 36px #00000016; }
+.panel h2 { margin: 0 0 18px; font-size: 16px; letter-spacing: -.01em; }
+.section-label { color: #A9A2BC; font-size: 11px; font-weight: 800; letter-spacing: .12em; margin: 22px 0 10px; text-transform: uppercase; }
+.section-label:first-of-type { margin-top: 0; }
+.field { margin: 0 0 14px; }
+label { display: block; color: #D7D2E4; font-size: 12px; font-weight: 650; margin-bottom: 7px; }
+input, select { width: 100%; border: 1px solid #3C374A; border-radius: 9px; background: #121118; color: #F7F4FF; padding: 11px 12px; font: inherit; font-size: 14px; outline: none; }
+input:focus, select:focus { border-color: var(--site-primary); box-shadow: 0 0 0 3px #9A7BFF20; }
+.help { color: #918BA3; font-size: 11px; margin-top: 6px; line-height: 1.55; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.segmented { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.segmented label { margin: 0; }
+.segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.segmented span { display: block; text-align: center; padding: 11px 8px; background: #121118; border: 1px solid #3C374A; border-radius: 9px; color: #C8C1D8; font-size: 12px; cursor: pointer; }
+.segmented input:checked + span { color: #E9E1FF; border-color: var(--site-primary); background: #6D50BD2B; }
+.result { background: linear-gradient(145deg, #28213C, #1A1822 70%); border-color: #9A7BFF4A; }
+.result-kicker { color: #BBAAFF; font-size: 11px; font-weight: 800; letter-spacing: .14em; }
+.big-number { display: flex; align-items: baseline; gap: 8px; margin: 7px 0 2px; }
+.big-number strong { font-size: 52px; letter-spacing: -.06em; line-height: 1.15; color: #FFFFFF; }
+.big-number span { color: #C6BDD9; font-size: 14px; }
+.result-sub { color: #BEB6D0; font-size: 12px; line-height: 1.6; }
+.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+.metric { border: 1px solid #FFFFFF14; background: #FFFFFF07; border-radius: 12px; padding: 13px; }
+.metric span { display: block; color: #A9A1BC; font-size: 11px; margin-bottom: 7px; }
+.metric strong { font-size: 21px; letter-spacing: -.03em; }
+.metric small { color: #A9A1BC; font-size: 11px; margin-left: 3px; }
+.progress-wrap { margin-top: 18px; }
+.progress-label { display: flex; justify-content: space-between; gap: 10px; color: #BDB5D0; font-size: 11px; margin-bottom: 8px; }
+.progress { height: 7px; background: #FFFFFF14; border-radius: 99px; overflow: hidden; }
+.progress > div { height: 100%; background: var(--site-primary); border-radius: inherit; width: 0; transition: width .2s; }
+.note { border-left: 2px solid #8E75D9; padding-left: 12px; margin-top: 18px; color: #B3ABC6; font-size: 11px; line-height: 1.7; }
+.breakdown { margin-top: 18px; border-top: 1px solid #FFFFFF15; padding-top: 16px; }
+.breakdown h3 { font-size: 12px; margin: 0 0 10px; color: #DAD4E9; }
+.breakdown-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; font-size: 12px; color: #B5AEC6; }
+.breakdown-row strong { color: #F1EDFA; font-weight: 650; text-align: right; }
+footer { max-width: 1000px; margin: 0 auto; padding: 0 22px 28px; color: #777184; font-size: 10px; line-height: 1.7; }
+footer a { color: #B7A5FF; }
+@media (max-width: 720px) { .layout { grid-template-columns: 1fr; } header { padding: 28px 20px; } h1 { font-size: calc(26px * var(--site-heading-scale)); } main { padding: 20px 14px 34px; } .panel { padding: 18px; } .big-number strong { font-size: 46px; } }
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="eyebrow">LIMBUS COMPANY · FARM PLANNER</div>
+  <h1>鏡ダンジョン周回計算機</h1>
+<p>1日のスタミナからノーマル鏡ダンジョンの周回数を計算し、パス経験値・破片ボックス・目標達成までの目安を確認できるツール。</p>
+</header>
+<main>
+<div class="layout">
+<section class="panel">
+<h2>目標と手持ち</h2>
+<div class="section-label">01 / 交換目標</div>
+<div class="field">
+<label for="targetType">目標の種類</label>
+<select id="targetType">
+<option value="400">星3人格 / E.G.O（400破片）</option>
+<option value="150">星2人格（150破片）</option>
+<option value="custom">必要破片数を自分で入力</option>
+</select>
+</div>
+<div class="two">
+<div class="field"><label for="required">必要破片数</label><input id="required" type="number" min="0" step="1" value="400"></div>
+<div class="field"><label for="owned">現在の破片数</label><input id="owned" type="number" min="0" step="1" value="0"></div>
+</div>
+<div class="field"><label for="boxesOwned">手持ちのセレクトボックス数</label><input id="boxesOwned" type="number" min="0" step="1" value="0"><div class="help">未開封のセレクトボックス。開封時の破片は下の平均値で見積もる。</div></div>
+<div class="section-label">02 / ボックス換算</div>
+<div class="field">
+<label for="shardsPerBox">ボックス1個あたりの破片数（見積もり）</label>
+<select id="shardsPerBox">
+<option value="2">期待値：2破片（1〜3の平均）</option>
+<option value="1">最低値：1破片（安全側）</option>
+<option value="3">最高値：3破片（上振れ）</option>
+</select>
+<div class="help">セレクトボックスは指定した囚人の破片を1〜3個獲得。平均2個は期待値で、保証値ではない。</div>
+</div>
+<div class="field">
+<label>リンバスパス</label>
+<div class="segmented">
+<label><input type="radio" name="pass" value="free"><span>未購入 / 無料</span></label>
+<label><input type="radio" name="pass" value="paid" checked><span>購入済み</span></label>
+</div>
+</div>
+<div class="section-label">03 / 周回設定</div>
+<div class="two">
+<div class="field"><label for="maxStamina">最大スタミナ</label><input id="maxStamina" type="number" min="0" step="1" value="260"><div class="help">自然回復分は含めず、スタミナ最大値を入力。</div></div>
+<div class="field"><label for="lunacyRefills">1日の狂気割回数</label><input id="lunacyRefills" type="number" min="0" step="1" value="0"><div class="help">狂気を使ってスタミナを回復する回数。</div></div>
+</div>
+<div class="two">
+<div class="field"><label for="startWeekday">周回を始める曜日</label><select id="startWeekday"><option value="0">月曜日</option><option value="1">火曜日</option><option value="2">水曜日</option><option value="3" selected>木曜日</option><option value="4">金曜日</option><option value="5">土曜日</option><option value="6">日曜日</option></select></div>
+<div class="field"><label for="days">周回する日数</label><input id="days" type="number" min="1" step="1" value="7"></div>
+</div>
+<div class="help">開始曜日と周回日数から木曜日を自動判定し、木曜日ごとに最大3周分の週ボーナスを加算する。</div>
+<div class="field"><label for="bpProgress">現在のパス経験値進捗（次レベルまで）</label><select id="bpProgress"><option value="0">0 / 10 EXP（レベル直後）</option><option value="1">1 / 10 EXP</option><option value="2">2 / 10 EXP</option><option value="3">3 / 10 EXP</option><option value="4">4 / 10 EXP</option><option value="5">5 / 10 EXP</option><option value="6">6 / 10 EXP</option><option value="7">7 / 10 EXP</option><option value="8">8 / 10 EXP</option><option value="9">9 / 10 EXP</option></select><div class="help">パスの通常報酬をすべて受け取り、上限後の追加レベルでボックスを獲得する前提。</div></div>
+</section>
+<section class="panel result" aria-live="polite">
+<div class="result-kicker">YOUR FARM PLAN</div>
+<div class="big-number"><strong id="runs">—</strong><span>目標までの周回目安</span></div>
+<div class="result-sub" id="summary">目標を入力すると、必要な周回数を計算するのじゃ。</div>
+<div class="metrics">
+<div class="metric"><span>1日の周回可能数</span><strong id="dailyRuns">13</strong><small>周 / 日</small></div>
+<div class="metric"><span>指定日数の周回数</span><strong id="totalRuns">91</strong><small>周</small></div>
+<div class="metric"><span>不足している破片</span><strong id="deficit">400</strong><small>破片</small></div>
+<div class="metric"><span>必要なボックス</span><strong id="neededBoxes">200</strong><small>個</small></div>
+<div class="metric"><span>1周あたりの箱</span><strong id="boxesPerRun">—</strong><small>個 / 目安</small></div>
+<div class="metric"><span>必要なパス経験値</span><strong id="neededExp">—</strong><small>EXP</small></div>
+<div class="metric"><span>予定周回で得るパス経験値</span><strong id="plannedExp">—</strong><small>EXP</small></div>
+<div class="metric"><span>予定周回で得るボックス</span><strong id="plannedBoxes">—</strong><small>個</small></div>
+</div>
+<div class="progress-wrap">
+<div class="progress-label"><span>ボックス充足率（現在の箱を含む）</span><strong id="coverage">0%</strong></div>
+<div class="progress"><div id="bar"></div></div>
+</div>
+<div class="breakdown">
+<h3>計算の内訳</h3>
+<div class="breakdown-row"><span>現在の破片＋手持ち箱の見積もり</span><strong id="currentTotal">0 破片</strong></div>
+<div class="breakdown-row"><span>周回で追加する箱</span><strong id="farmBoxes">200 個</strong></div>
+<div class="breakdown-row"><span>獲得見込み破片（追加分）</span><strong id="farmShards">400 破片</strong></div>
+<div class="breakdown-row"><span>ノーマル周回の基本経験値</span><strong id="baseExp">—</strong></div>
+<div class="breakdown-row"><span>週ボーナスの追加経験値</span><strong id="bonusExp">—</strong></div>
+<div class="breakdown-row"><span>予定周回で獲得する合計経験値</span><strong id="effectiveRuns">—</strong></div>
+</div>
+<div class="note" id="caveat">この計算は、パス報酬上限後の追加レベルで得られるボックスを中心に見積もる。箱から得られる破片数はランダムなので、平均値では前後するのじゃ。</div>
+</section>
+</div>
+</main>
+<footer>
+<p>※ 鏡ダンジョンの報酬・パス仕様はシーズンや更新で変わる場合があるため、報酬選択画面と照らし合わせて使ってね。ボックスの破片数は1〜3個。期待値2個は確定値ではない。</p>
+<p>参考：<a href="https://wikiwiki.jp/lcbwiki/%E9%8F%A1%E3%83%80%E3%83%B3%E3%82%B8%E3%83%A7%E3%83%B3" target="_blank" rel="noreferrer">鏡ダンジョン攻略 Wiki*</a> ／ <a href="https://limbuscompany.wiki.gg/wiki/Shard" target="_blank" rel="noreferrer">Limbus Company Wiki - Shard</a></p>
+</footer>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const runNames = {30:"ノーマル・週ボーナスなし",45:"ノーマル・週ボーナス1回",75:"ハード・週ボーナス1回",150:"ハード・週ボーナス2回",225:"ハード・週ボーナス3回"};
+function num(id) { return Math.max(0, Number($(id).value) || 0); }
+function update() {
+  const required = Math.floor(num('required'));
+  const owned = Math.floor(num('owned'));
+  const boxesOwned = Math.floor(num('boxesOwned'));
+  const shardsPerBox = Number($('shardsPerBox').value);
+  const bpProgress = Number($('bpProgress').value);
+  const pass = document.querySelector('input[name="pass"]:checked').value;
+  const maxStamina = Math.floor(num('maxStamina'));
+  const lunacyRefills = Math.floor(num('lunacyRefills'));
+  const totalDailyStamina = maxStamina * (1 + lunacyRefills);
+  const staminaPerRun = 100;
+  const days = Math.max(1, Math.floor(num('days')));
+  const startWeekday = Number($('startWeekday').value);
+  const dailyRuns = Math.floor(totalDailyStamina / staminaPerRun);
+  let totalRuns = 0;
+  let staminaCarry = 0;
+  const runsByDay = [];
+  for (let day = 0; day < days; day++) {
+    const availableStamina = staminaCarry + totalDailyStamina;
+    const runsToday = Math.floor(availableStamina / staminaPerRun);
+    staminaCarry = availableStamina - runsToday * staminaPerRun;
+    runsByDay.push(runsToday);
+    totalRuns += runsToday;
+  }
+  const firstThursday = (3 - startWeekday + 7) % 7;
+  const thursdays = days > firstThursday ? 1 + Math.floor((days - 1 - firstThursday) / 7) : 0;
+  const bonusRuns = runsByDay.reduce((sum, runsToday, day) => sum + ((startWeekday + day) % 7 === 3 ? Math.min(runsToday, 3) : 0), 0);
+  const baseExp = totalRuns * 30;
+  const bonusExp = bonusRuns * 15;
+  const plannedExp = baseExp + bonusExp;
+  const boxesPerLevel = pass === 'paid' ? 3 : 1;
+  const currentTotal = owned + boxesOwned * shardsPerBox;
+  const deficit = Math.max(0, required - currentTotal);
+  const neededBoxes = Math.ceil(deficit / shardsPerBox);
+  const expNeeded = Math.max(0, Math.ceil(neededBoxes / boxesPerLevel) * 10 - bpProgress);
+  let runs = 0;
+  let expForGoal = 0;
+  let goalDay = 0;
+  while (neededBoxes > 0 && expForGoal < expNeeded && goalDay < 100000) {
+    const weekday = (startWeekday + goalDay) % 7;
+    const runsToday = Math.floor(totalDailyStamina * (goalDay + 1) / staminaPerRun) - runs;
+    if (runsToday <= 0) { goalDay++; continue; }
+    const bonusToday = weekday === 3 ? Math.min(runsToday, 3) : 0;
+    runs += runsToday;
+    expForGoal += runsToday * 30 + bonusToday * 15;
+    goalDay++;
+  }
+  const earnedLevels = Math.floor((bpProgress + plannedExp) / 10);
+  const boxesPerRun = totalRuns > 0 ? (plannedExp / 10 * boxesPerLevel) / totalRuns : 0;
+  const farmBoxes = Math.max(0, earnedLevels * boxesPerLevel);
+  const farmShards = farmBoxes * shardsPerBox;
+  const totalBoxes = boxesOwned + farmBoxes;
+  const coverage = neededBoxes + boxesOwned > 0 ? Math.min(100, (boxesOwned + farmBoxes) / Math.max(1, neededBoxes + boxesOwned) * 100) : 100;
+  $('runs').textContent = runs.toLocaleString('ja-JP');
+  $('dailyRuns').textContent = runsByDay.length ? `${runsByDay[0].toLocaleString('ja-JP')}〜${Math.max(...runsByDay).toLocaleString('ja-JP')}` : dailyRuns.toLocaleString('ja-JP');
+  $('totalRuns').textContent = totalRuns.toLocaleString('ja-JP');
+  $('summary').textContent = deficit === 0 ? '手持ちの破片・ボックスで目標達成できる見込み！' : `不足分 ${deficit.toLocaleString('ja-JP')} 破片。ノーマルを約 ${runs.toLocaleString('ja-JP')} 周すると必要な箱数に届く見込み。指定日数では余剰スタミナを翌日に繰り越して ${totalRuns.toLocaleString('ja-JP')} 周できる計算。`;
+  $('deficit').textContent = deficit.toLocaleString('ja-JP');
+  $('neededBoxes').textContent = neededBoxes.toLocaleString('ja-JP');
+  $('boxesPerRun').textContent = Number(boxesPerRun.toFixed(1)).toLocaleString('ja-JP');
+  $('neededExp').textContent = expNeeded.toLocaleString('ja-JP');
+  $('plannedExp').textContent = plannedExp.toLocaleString('ja-JP');
+  $('plannedBoxes').textContent = farmBoxes.toLocaleString('ja-JP');
+  $('currentTotal').textContent = `${currentTotal.toLocaleString('ja-JP')} 破片相当`;
+  $('farmBoxes').textContent = `${farmBoxes.toLocaleString('ja-JP')} 個`;
+  $('farmShards').textContent = `${farmShards.toLocaleString('ja-JP')} 破片`;
+  $('baseExp').textContent = `${baseExp.toLocaleString('ja-JP')} EXP`;
+  $('bonusExp').textContent = `${bonusExp.toLocaleString('ja-JP')} EXP（${bonusRuns}回分）`;
+  $('effectiveRuns').textContent = `${plannedExp.toLocaleString('ja-JP')} EXP`;
+  $('coverage').textContent = `${Math.round(coverage)}%`;
+  $('bar').style.width = `${coverage}%`;
+  $('caveat').textContent = `計算前提：余ったスタミナは翌日に繰り越し、1周100スタミナ。開始曜日から${days}日間で木曜日は${thursdays}回、週ボーナスは合計${bonusRuns}周分（追加${bonusExp} EXP）。木曜日は最大3周に追加15 EXP。パス上限後は追加レベル1つごとに${boxesPerLevel}箱（${pass === 'paid' ? '購入済みパス' : '無料パス'}）、1レベル=10 EXP。箱の破片数は${shardsPerBox === 2 ? '期待値2個' : shardsPerBox + '個で固定した見積もり'}。実際のゲーム内報酬表示と差がある場合は、ゲーム内表示を優先してね。`;
+}
+$('targetType').addEventListener('change', () => {
+  if ($('targetType').value !== 'custom') $('required').value = $('targetType').value;
+  update();
+});
+$('required').addEventListener('input', () => { $('targetType').value = ['150','400'].includes($('required').value) ? $('required').value : 'custom'; update(); });
+document.querySelectorAll('input[name="pass"]').forEach(el => el.addEventListener('change', update));
+['owned','boxesOwned','shardsPerBox','bpProgress','maxStamina','lunacyRefills','days'].forEach(id => $(id).addEventListener('input', update));
+$('startWeekday').addEventListener('change', update);
+update();
+</script>
+
+<!--sites-preview-theme:start-->
+<style data-sites-preview-theme>:root{--site-primary:#6bc67f !important;--site-heading-scale:1.1 !important}</style>
+<script type="application/json" data-sites-preview-theme>{"appearance":"custom","primary":"#6bc67f","secondary":"#29243a","background":"#111016","typography":"original","spacing":1,"roundness":1,"headingScale":1.1,"decorationOpacity":1}</script>
+<!--sites-preview-theme:end-->
+</body>
+</html>
